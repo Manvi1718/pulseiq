@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 160 40"
+     width="160" height="40"
+     aria-label="PulseIQ Logo"
+     role="img">
+
+  <!-- ── Signal / Pulse waveform icon ──────────────────── -->
+  <g transform="translate(0, 4)">
+    <!-- Flat line left -->
+    <line x1="2"  y1="16" x2="10" y2="16"
+          stroke="#00d4ff" stroke-width="2.5"
+          stroke-linecap="round"/>
+    <!-- Pulse spike up -->
+    <polyline
+      points="10,16 14,16 17,4 20,28 23,16 27,16"
+      fill="none"
+      stroke="#00d4ff"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+    <!-- Flat line right -->
+    <line x1="27" y1="16" x2="35" y2="16"
+          stroke="#00d4ff" stroke-width="2.5"
+          stroke-linecap="round"/>
+    <!-- Glow dot at peak -->
+    <circle cx="17" cy="4" r="2.5"
+            fill="#00d4ff" opacity="0.9"/>
+  </g>
+
+  <!-- ── "Pulse" text ───────────────────────────────────── -->
+  <text x="42" y="27"
+        font-family="'Segoe UI', Arial, sans-serif"
+        font-size="18"
+        font-weight="800"
+        letter-spacing="-0.5"
+        fill="#e6edf3">Pulse</text>
+
+  <!-- ── "IQ" accent text ───────────────────────────────── -->
+  <text x="100" y="27"
+        font-family="'Segoe UI', Arial, sans-serif"
+        font-size="18"
+        font-weight="800"
+        letter-spacing="-0.5"
+        fill="#00d4ff">IQ</text>
+
+</svg>

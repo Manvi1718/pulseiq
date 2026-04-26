@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PulseIQ Report — {{ case.name }}</title>
+
+    {% if is_html_export %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% endif %}
+
+    <style>
+      /* ── Reset & Base ─────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        font-size: 12px;
+        color: #1a1a2e;
+        background: #ffffff;
+        line-height: 1.6;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+
+      /* ── Cover Page ───────────────────────────────────────── */
+      .cover {
+        text-align: center;
+        padding: 60px 0 48px;
+        border-bottom: 3px solid #00d4ff;
+        margin-bottom: 40px;
+      }
+      .cover-logo {
+        font-size: 36px;
+        font-weight: 900;
+        letter-spacing: -1px;
+        color: #0d1117;
+        margin-bottom: 6px;
+      }
+      .cover-logo span {
+        color: #00d4ff;
+      }
+      .cover-tagline {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 32px;
+      }
+      .cover-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0d1117;
+        margin-bottom: 8px;
+      }
+      .cover-meta {
+        font-size: 12px;
+        color: #888;
+      }
+      .cover-badge {
+        display: inline-block;
+        background: #0d1117;
+        color: #00d4ff;
+        padding: 6px 18px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+
+      /* ── Headings ─────────────────────────────────────────── */
+      h1 {
+        font-size: 20px;
+        color: #0d1117;
+        border-left: 4px solid #00d4ff;
+        padding-left: 12px;
+        margin: 32px 0 12px;
+      }
+      h2 {
+        font-size: 15px;
+        color: #333;
+        margin: 20px 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #eee;
+      }
+      h3 {
+        font-size: 13px;
+        color: #555;
+        margin: 14px 0 6px;
+      }
+      p {
+        color: #444;
+        margin-bottom: 10px;
+      }
+
+      /* ── KPI Grid ─────────────────────────────────────────── */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 16px 0 24px;
+      }
+      .kpi-box {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+        background: #f9fafb;
+      }
+      .kpi-num {
+        font-size: 24px;
+        font-weight: 800;
+        color: #0d1117;
+        font-variant-numeric: tabular-nums;
+      }
+      .kpi-num.cyan {
+        color: #00aac4;
+      }
+      .kpi-num.green {
+        color: #2ea043;
+      }
+      .kpi-num.red {
+        color: #da3633;
+      }
+      .kpi-num.yellow {
+        color: #b08800;
+      }
+      .kpi-lbl {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      /* ── Tables ───────────────────────────────────────────── */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0 20px;
+        font-size: 11px;
+      }
+      thead th {
+        background: #0d1117;
+        color: #ffffff;
+        padding: 8px 12px;
+        text-align: left;
+        font-weight: 600;
+      }
+      tbody td {
+        padding: 7px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        color: #333;
+      }
+      tbody tr:nth-child(even) td {
+        background: #f9fafb;
+      }
+      tbody tr:hover td {
+        background: #f0faff;
+      }
+
+      /* ── Badges ───────────────────────────────────────────── */
+      .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 99px;
+        font-size: 10px;
+        font-weight: 600;
+      }
+      .badge-green {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-red {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-blue {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .badge-yellow {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .badge-cyan {
+        background: #e0f7ff;
+        color: #005f7a;
+      }
+      .badge-gray {
+        background: #e9ecef;
+        color: #495057;
+      }
+
+      /* ── Charts (HTML export only) ───────────────────────── */
+      .chart-wrap {
+        background: #f9fafb;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 12px 0 20px;
+      }
+      .chart-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      /* ── Section divider ─────────────────────────────────── */
+      .divider {
+        border: none;
+        border-top: 1px solid #e0e0e0;
+        margin: 28px 0;
+      }
+
+      /* ── Page break (PDF) ────────────────────────────────── */
+      .page-break {
+        page-break-before: always;
+      }
+
+      /* ── Insight Box ─────────────────────────────────────── */
+      .insight-box {
+        background: #f0faff;
+        border-left: 4px solid #00aac4;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 12px 0 20px;
+        font-size: 12px;
+        color: #005f7a;
+      }
+
+      /* ── Footer ──────────────────────────────────────────── */
+      .report-footer {
+        margin-top: 48px;
+        padding-top: 16px;
+        border-top: 2px solid #0d1117;
+        text-align: center;
+        font-size: 10px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ══════════════════════════════════════════════════════════
+     COVER PAGE
+════════════════════════════════════════════════════════════ -->
+    <div class="cover">
+      <div class="cover-logo">Pulse<span>IQ</span></div>
+      <div class="cover-tagline">
+        Real-Time Social Intelligence, Powered by AI
+      </div>
+      <div class="cover-badge">Analytics Report</div>
+      <div class="cover-title">{{ case.name }}</div>
+      <div class="cover-meta">
+        Platform:
+        <strong>{{ case.platform or 'Facebook' }}</strong> &nbsp;|&nbsp;
+        Keyword: <strong>{{ case.keyword }}</strong> &nbsp;|&nbsp; Generated:
+        <strong>{{ generated_at }}</strong>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+     1. INTRODUCTION
+════════════════════════════════════════════════════════════ -->
+    <h1>1. Introduction</h1>
+    <p>
+      This report presents a comprehensive analysis of social media data
+      collected from
+      <strong>{{ case.platform or 'Facebook' }}</strong> for the keyword
+      <strong>"{{ case.keyword }}"</strong>. The analysis was performed using
+      the <strong>PulseIQ</strong> analytics platform, which integrates 12
+      AI-powered modules covering sentiment analysis, network analysis,
+      influencer detection, fake news detection, user segmentation, popularity
+      prediction, and more.
+    </p>
+    <p>
+      A total of <strong>{{ results.summary.total_posts }}</strong> posts were
+      collected and processed. The objective is to derive actionable insights on
+      public perception, engagement patterns, and content trends.
+    </p>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     2. PROBLEM STATEMENT
+════════════════════════════════════════════════════════════ -->
+    <h1>2. Problem Statement</h1>
+    <p>
+      Social media generates billions of posts daily, making manual analysis
+      infeasible. The challenge is to automatically extract meaningful insights
+      — including public sentiment, trending topics, influential users, and
+      misinformation — from large-scale unstructured social media data in a
+      timely and accurate manner.
+    </p>
+    <p>
+      This project addresses the problem by developing a full-stack AI-powered
+      analytics platform that integrates NLP, machine learning, and network
+      analysis algorithms to process and visualize social media data at scale.
+    </p>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     3. CASE STUDY DESCRIPTION
+════════════════════════════════════════════════════════════ -->
+    <h1>3. Case Study Description</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Case Name</td>
+          <td><strong>{{ case.name }}</strong></td>
+        </tr>
+        <tr>
+          <td>Keyword / Topic</td>
+          <td>{{ case.keyword }}</td>
+        </tr>
+        <tr>
+          <td>Platform</td>
+          <td>{{ case.platform or 'Facebook' }}</td>
+        </tr>
+        <tr>
+          <td>API Source</td>
+          <td>Apify — Facebook Posts Scraper</td>
+        </tr>
+        <tr>
+          <td>Total Posts Collected</td>
+          <td>{{ results.summary.total_posts }}</td>
+        </tr>
+        <tr>
+          <td>Analysis Date</td>
+          <td>{{ generated_at }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     4. SYSTEM ARCHITECTURE
+════════════════════════════════════════════════════════════ -->
+    <h1>4. System Architecture</h1>
+    <p>The PulseIQ platform follows a modular full-stack architecture:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend</td>
+          <td>Flask + Jinja2 + Bootstrap 5 + Chart.js</td>
+        </tr>
+        <tr>
+          <td>Backend</td>
+          <td>Python 3.10 + Flask</td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td>SQLite via SQLAlchemy</td>
+        </tr>
+        <tr>
+          <td>Data Source</td>
+          <td>Apify (Facebook Posts Scraper)</td>
+        </tr>
+        <tr>
+          <td>NLP</td>
+          <td>VADER SentimentIntensityAnalyzer, TextBlob</td>
+        </tr>
+        <tr>
+          <td>ML Models</td>
+          <td>scikit-learn (Logistic Regression, KMeans, Random Forest)</td>
+        </tr>
+        <tr>
+          <td>Network</td>
+          <td>NetworkX (Eigenvector Centrality, Community Detection)</td>
+        </tr>
+        <tr>
+          <td>Reports</td>
+          <td>WeasyPrint (PDF), Jinja2 (HTML)</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     5. METHODOLOGY
+════════════════════════════════════════════════════════════ -->
+    <h1>5. Methodology</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Method</th>
+          <th>Algorithm / Tool</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Sentiment Analysis</td>
+          <td>Polarity scoring</td>
+          <td>VADER SentimentIntensityAnalyzer</td>
+        </tr>
+        <tr>
+          <td>Trending Topics</td>
+          <td>Frequency + TF-IDF</td>
+          <td>Regex + scikit-learn TfidfVectorizer</td>
+        </tr>
+        <tr>
+          <td>Network Analysis</td>
+          <td>Graph construction</td>
+          <td>NetworkX directed graph + community detection</td>
+        </tr>
+        <tr>
+          <td>Recommendation</td>
+          <td>Content-based filtering</td>
+          <td>TF-IDF + Cosine Similarity</td>
+        </tr>
+        <tr>
+          <td>Fake News Detection</td>
+          <td>Text classification</td>
+          <td>Logistic Regression on TF-IDF features</td>
+        </tr>
+        <tr>
+          <td>User Segmentation</td>
+          <td>Unsupervised clustering</td>
+          <td>KMeans (k=4) on behavioral features</td>
+        </tr>
+        <tr>
+          <td>Influencer Detection</td>
+          <td>Centrality measurement</td>
+          <td>Eigenvector Centrality (NetworkX)</td>
+        </tr>
+        <tr>
+          <td>Popularity Prediction</td>
+          <td>Regression</td>
+          <td>Random Forest Regressor (100 trees)</td>
+        </tr>
+        <tr>
+          <td>Ad Campaign Opt.</td>
+          <td>Formula-based KPI calc.</td>
+          <td>CTR, CPC, CPA, ROAS, ROI formulas</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     6. RESULTS & ANALYSIS
+════════════════════════════════════════════════════════════ -->
+    <div class="page-break"></div>
+    <h1>6. Results &amp; Analysis</h1>
+
+    <!-- Overview KPIs -->
+    <h2>6.1 Dataset Overview</h2>
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-num cyan">{{ results.summary.total_posts }}</div>
+        <div class="kpi-lbl">Total Posts</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num green">{{ results.summary.total_likes }}</div>
+        <div class="kpi-lbl">Total Likes</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num cyan">{{ results.summary.total_shares }}</div>
+        <div class="kpi-lbl">Total Shares</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num yellow">{{ results.summary.avg_engagement }}</div>
+        <div class="kpi-lbl">Avg Engagement</div>
+      </div>
+    </div>
+
+    <!-- Sentiment Results -->
+    <h2>6.2 Sentiment Analysis</h2>
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-num">
+          {{ results.sentiment.counts.get('Positive', 0) }}
+        </div>
+        <div class="kpi-lbl">Positive</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num red">
+          {{ results.sentiment.counts.get('Negative', 0) }}
+        </div>
+        <div class="kpi-lbl">Negative</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num">
+          {{ results.sentiment.counts.get('Neutral', 0) }}
+        </div>
+        <div class="kpi-lbl">Neutral</div>
+      </div>
+      <div class="kpi-box">
+        {% set total_s = results.sentiment.counts.values() | sum %} {% set
+        pos_pct = ((results.sentiment.counts.get('Positive',0) /
+        [total_s,1]|max)*100)|round(1) %}
+        <div class="kpi-num green">{{ pos_pct }}%</div>
+        <div class="kpi-lbl">Positive Rate</div>
+      </div>
+    </div>
+    {% if is_html_export %}
+    <div class="chart-wrap" style="max-width: 320px">
+      <canvas id="rptSentPie" height="200"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- Trending Topics -->
+    <h2>6.3 Trending Topics</h2>
+    {% if results.trending.hashtags %}
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Hashtag</th>
+          <th>Frequency</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in results.trending.hashtags[:10] %}
+        <tr>
+          <td>#{{ loop.index }}</td>
+          <td><strong>{{ h.tag }}</strong></td>
+          <td>{{ h.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No hashtags detected in collected posts.</p>
+    {% endif %}
+
+    <!-- Influencers -->
+    <h2>6.4 Top Influencers</h2>
+    {% if results.influencers %}
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Author</th>
+          <th>Posts</th>
+          <th>Total Likes</th>
+          <th>Influence Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inf in results.influencers %}
+        <tr>
+          <td><span class="badge badge-cyan">#{{ inf.rank }}</span></td>
+          <td><strong>{{ inf.author }}</strong></td>
+          <td>{{ inf.posts }}</td>
+          <td>{{ inf.total_likes }}</td>
+          <td><strong>{{ inf.influence_score }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>Insufficient data for influencer detection.</p>
+    {% endif %}
+
+    <!-- Fake News -->
+    <h2>6.5 Fake News Detection</h2>
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-num red">{{ results.fake_news.fake_count }}</div>
+        <div class="kpi-lbl">Flagged Fake</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num green">{{ results.fake_news.real_count }}</div>
+        <div class="kpi-lbl">Verified Real</div>
+      </div>
+      <div class="kpi-box">
+        {% set total_fn = results.fake_news.fake_count +
+        results.fake_news.real_count %} {% set fake_pct =
+        ((results.fake_news.fake_count / [total_fn,1]|max)*100)|round(1) %}
+        <div
+          class="kpi-num {% if fake_pct >= 40 %}red{% elif fake_pct >= 20 %}yellow{% else %}green{% endif %}"
+        >
+          {{ fake_pct }}%
+        </div>
+        <div class="kpi-lbl">Fake Rate</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num" style="font-size: 16px; padding-top: 6px">
+          {% if fake_pct >= 40 %}HIGH ⚠ {% elif fake_pct >= 20 %}MEDIUM {% else
+          %}LOW ✓{% endif %}
+        </div>
+        <div class="kpi-lbl">Risk Level</div>
+      </div>
+    </div>
+
+    <!-- User Segments -->
+    <h2>6.6 User Segmentation</h2>
+    {% if results.segments %}
+    <table>
+      <thead>
+        <tr>
+          <th>Segment</th>
+          <th>Users</th>
+          <th>Avg Likes</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seg in results.segments %}
+        <tr>
+          <td><strong>{{ seg.name }}</strong></td>
+          <td>{{ seg.user_count }}</td>
+          <td>{{ seg.avg_likes }}</td>
+          <td style="font-size: 10px; color: #666">{{ seg.description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>Insufficient users for segmentation.</p>
+    {% endif %}
+
+    <!-- Prediction -->
+    {% if results.prediction and results.prediction.predictions %}
+    <h2>6.7 Popularity Prediction</h2>
+    <div class="insight-box">
+      Model Accuracy (R² Score):
+      <strong>{{ results.prediction.accuracy }}%</strong> &nbsp;|&nbsp; Posts
+      Analysed:
+      <strong>{{ results.prediction.total_posts }}</strong> &nbsp;|&nbsp;
+      Algorithm: <strong>Random Forest (100 trees)</strong>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Author</th>
+          <th>Post</th>
+          <th>Actual</th>
+          <th>Predicted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in results.prediction.predictions[:8] %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ p.author }}</td>
+          <td style="font-size: 10px; color: #666; max-width: 240px">
+            {{ p.text }}
+          </td>
+          <td>{{ p.actual }}</td>
+          <td><strong style="color: #00aac4">{{ p.predicted }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     7. CONCLUSION
+════════════════════════════════════════════════════════════ -->
+    <div class="page-break"></div>
+    <h1>7. Conclusion</h1>
+    <p>
+      This report analysed
+      <strong>{{ results.summary.total_posts }}</strong> Facebook posts for the
+      keyword <strong>"{{ case.keyword }}"</strong> using the PulseIQ platform.
+      Key findings:
+    </p>
+    <ul style="padding-left: 20px; margin-bottom: 12px">
+      <li style="margin-bottom: 6px">
+        Sentiment was predominantly
+        <strong>
+          {% if results.sentiment.counts.get('Positive',0) >
+          results.sentiment.counts.get('Negative',0) %} Positive ✅ {% else %}
+          Negative ⚠️ {% endif %}
+        </strong>
+        across collected posts.
+      </li>
+      {% if results.trending.hashtags %}
+      <li style="margin-bottom: 6px">
+        The top trending hashtag was
+        <strong>{{ results.trending.hashtags[0].tag }}</strong>
+        with {{ results.trending.hashtags[0].count }} mentions.
+      </li>
+      {% endif %} {% if results.influencers %}
+      <li style="margin-bottom: 6px">
+        The most influential user was
+        <strong>{{ results.influencers[0].author }}</strong>
+        with an influence score of {{ results.influencers[0].influence_score }}.
+      </li>
+      {% endif %}
+      <li style="margin-bottom: 6px">
+        Fake news risk level was
+        <strong
+          >{% if fake_pct >= 40 %}HIGH{% elif fake_pct >= 20 %}MEDIUM{% else
+          %}LOW{% endif %}</strong
+        >
+        ({{ fake_pct }}% posts flagged).
+      </li>
+      {% if results.prediction and results.prediction.accuracy %}
+      <li style="margin-bottom: 6px">
+        The Random Forest engagement prediction model achieved
+        <strong>{{ results.prediction.accuracy }}% R² accuracy</strong>.
+      </li>
+      {% endif %}
+    </ul>
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════════
+     8. REFERENCES
+════════════════════════════════════════════════════════════ -->
+    <h1>8. References</h1>
+    <ol style="padding-left: 20px; color: #444; font-size: 11px">
+      <li style="margin-bottom: 6px">
+        Hutto, C.J. & Gilbert, E.E. (2014). VADER: A Parsimonious Rule-based
+        Model for Sentiment Analysis of Social Media Text. <em>ICWSM</em>.
+      </li>
+      <li style="margin-bottom: 6px">
+        Pedregosa et al. (2011). Scikit-learn: Machine Learning in Python.
+        <em>JMLR 12</em>, pp. 2825–2830.
+      </li>
+      <li style="margin-bottom: 6px">
+        Hagberg, A., Swart, P. & Chult, D. (2008). Exploring network structure,
+        dynamics, and function using NetworkX. <em>SciPy Proceedings</em>.
+      </li>
+      <li style="margin-bottom: 6px">
+        Breiman, L. (2001). Random Forests. <em>Machine Learning 45</em>, pp.
+        5–32.
+      </li>
+      <li style="margin-bottom: 6px">
+        Apify Platform — Facebook Posts Scraper. Available at:
+        https://apify.com/apify/facebook-posts-scraper
+      </li>
+    </ol>
+
+    <!-- Footer -->
+    <div class="report-footer">
+      Generated by <strong>PulseIQ</strong> — Social Media Intelligence Platform
+      &nbsp;|&nbsp; {{ generated_at }} &nbsp;|&nbsp; Confidential
+    </div>
+
+    {% if is_html_export %}
+    <script>
+      // Sentiment Pie Chart
+      (function(){
+        const ctx = document.getElementById('rptSentPie');
+        if (!ctx) return;
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels  : ['Positive','Negative','Neutral'],
+            datasets: [{
+              data           : [
+                {{ results.sentiment.counts.get('Positive', 0) }},
+                {{ results.sentiment.counts.get('Negative', 0) }},
+                {{ results.sentiment.counts.get('Neutral',  0) }},
+              ],
+              backgroundColor: ['#2ea043','#da3633','#8b949e'],
+              borderWidth    : 2,
+              borderColor    : '#ffffff',
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins   : { legend: { position: 'bottom' } },
+          }
+        });
+      })();
+    </script>
+    {% endif %}
+  </body>
+</html>

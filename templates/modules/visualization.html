@@ -1,0 +1,185 @@
+{% extends "base.html" %} {% block title %}Visualization — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Visualization</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Data Visualization</h1>
+    <p class="page-subtitle">
+      Engagement, reach, and activity charts across all collected posts
+    </p>
+  </div>
+
+  {% if posts %} {% set viz = namespace() %} {% set _ = posts %}
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Posts</div>
+      <div class="kpi-value" data-count="{{ posts|length }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Likes</div>
+      <div class="kpi-value" data-count="{{ posts|sum(attribute='likes') }}">
+        0
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Shares</div>
+      <div class="kpi-value" data-count="{{ posts|sum(attribute='shares') }}">
+        0
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Comments</div>
+      <div class="kpi-value" data-count="{{ posts|sum(attribute='comments') }}">
+        0
+      </div>
+    </div>
+  </div>
+
+  <!-- Engagement Over Time -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <div class="card-title">Engagement Over Time</div>
+      <span class="badge badge-muted">Likes · Shares · Comments</span>
+    </div>
+    <div class="chart-container" style="height: 300px">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Top Authors by Likes</div>
+      </div>
+      <div class="chart-container" style="height: 280px">
+        <canvas id="authorsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Text Length vs Likes</div>
+      </div>
+      <div class="chart-container" style="height: 280px">
+        <canvas id="scatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3 -->
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Posts by Hour of Day</div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="hourlyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Posts by Day of Week</div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="weekdayChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <h3>No data to visualize</h3>
+      <p>Collect posts first to see visualizations.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if posts %}
+<script>
+  // Build chart data from posts passed by Flask
+  const posts = {{ posts | tojson }};
+
+  // ── Timeline: group by date ───────────────────────────────────
+  const daily = {};
+  posts.forEach(p => {
+    const d = p.created_at ? p.created_at.substring(0,10) : 'Unknown';
+    if (!daily[d]) daily[d] = { likes:0, shares:0, comments:0 };
+    daily[d].likes    += p.likes    || 0;
+    daily[d].shares   += p.shares   || 0;
+    daily[d].comments += p.comments || 0;
+  });
+  const dates = Object.keys(daily).sort();
+
+  createLineChart('timelineChart', dates, [
+    { label:'Likes',    data: dates.map(d=>daily[d].likes),    color:'#3fb950' },
+    { label:'Shares',   data: dates.map(d=>daily[d].shares),   color:'#00d4ff' },
+    { label:'Comments', data: dates.map(d=>daily[d].comments), color:'#d29922' },
+  ]);
+
+  // ── Top Authors ───────────────────────────────────────────────
+  const authorMap = {};
+  posts.forEach(p => {
+    const a = p.author || 'Unknown';
+    authorMap[a] = (authorMap[a] || 0) + (p.likes || 0);
+  });
+  const topAuthors = Object.entries(authorMap)
+    .sort((a,b) => b[1]-a[1]).slice(0,10);
+
+  createBarChart('authorsChart',
+    topAuthors.map(a => a[0].substring(0,12)),
+    [{ label:'Likes', data: topAuthors.map(a=>a[1]), color:'#58a6ff' }],
+    true
+  );
+
+  // ── Scatter: text length vs likes ────────────────────────────
+  const scatterData = posts
+    .filter(p => p.text)
+    .map(p => ({ x: p.text.length, y: p.likes || 0 }));
+
+  createScatterChart('scatterChart', scatterData,
+    'Text Length (chars)', 'Likes');
+
+  // ── Hourly ────────────────────────────────────────────────────
+  const hourly = Array(24).fill(0);
+  posts.forEach(p => {
+    if (p.created_at) {
+      const h = new Date(p.created_at).getHours();
+      hourly[h]++;
+    }
+  });
+  createBarChart('hourlyChart',
+    Array.from({length:24}, (_,i)=> `${String(i).padStart(2,'0')}:00`),
+    [{ label:'Posts', data: hourly, color:'#bc8cff' }]
+  );
+
+  // ── Weekday ───────────────────────────────────────────────────
+  const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const wdCount  = Array(7).fill(0);
+  posts.forEach(p => {
+    if (p.created_at) {
+      const d = new Date(p.created_at).getDay();
+      wdCount[(d+6)%7]++;   // convert Sun=0 to Mon=0
+    }
+  });
+  createBarChart('weekdayChart',
+    weekdays,
+    [{ label:'Posts', data: wdCount, color:'#ffa657' }]
+  );
+</script>
+{% endif %} {% endblock %}

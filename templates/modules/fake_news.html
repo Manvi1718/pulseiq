@@ -1,0 +1,294 @@
+{% extends "base.html" %} {% block title %}Fake News — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Fake News</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Fake News Detection</h1>
+    <p class="page-subtitle">
+      Logistic Regression classifier trained on real/fake post patterns
+    </p>
+  </div>
+
+  {% if results %} {# ── Pre-compute counts in Python-side via Jinja ── #} {%
+  set fake_count = results | selectattr('label','eq','Fake') | list | length %}
+  {% set real_count = results | selectattr('label','eq','Real') | list | length
+  %} {% set total = results | length %}
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Analysed</div>
+      <div class="kpi-value" data-count="{{ total }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Flagged Fake</div>
+      <div
+        class="kpi-value"
+        style="color: #f85149"
+        data-count="{{ fake_count }}"
+      >
+        0
+      </div>
+      <div class="kpi-change negative">
+        {{ ((fake_count / total) * 100) | round(1) }}% of posts
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Verified Real</div>
+      <div
+        class="kpi-value"
+        style="color: #3fb950"
+        data-count="{{ real_count }}"
+      >
+        0
+      </div>
+      <div class="kpi-change positive">
+        {{ ((real_count / total) * 100) | round(1) }}% of posts
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Risk Level</div>
+      <div class="kpi-value" style="font-size: 18px; padding-top: 6px">
+        {% if (fake_count / total) > 0.5 %}
+        <span style="color: #f85149">HIGH ⚠️</span>
+        {% elif (fake_count / total) > 0.25 %}
+        <span style="color: #d29922">MEDIUM</span>
+        {% else %}
+        <span style="color: #3fb950">LOW ✓</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-2 mb-6">
+    <!-- Doughnut: Real vs Fake -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Real vs Fake Distribution</div>
+      </div>
+      <div class="chart-container" style="height: 280px; position: relative">
+        <canvas id="fakeNewsPie"></canvas>
+      </div>
+    </div>
+
+    <!-- Bar: Confidence Buckets -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Confidence Score Distribution</div>
+      </div>
+      <div class="chart-container" style="height: 280px; position: relative">
+        <canvas id="confidenceBar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Post Classification Results</div>
+      <button
+        class="btn btn-secondary btn-sm"
+        onclick="exportTableCSV('fakeTable', 'fake-news-results.csv')"
+      >
+        Export CSV
+      </button>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" id="fakeTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Author</th>
+            <th>Post Text</th>
+            <th>Label</th>
+            <th>Fake %</th>
+            <th>Real %</th>
+            <th>Source</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td class="text-mono text-xs">{{ loop.index }}</td>
+            <td style="font-weight: 500; font-size: 13px">{{ r.author }}</td>
+            <td
+              style="
+                font-size: 12px;
+                color: var(--text-muted);
+                max-width: 260px;
+              "
+            >
+              {{ r.text }}
+            </td>
+            <td>
+              <span
+                class="badge {{ 'badge-danger' if r.label == 'Fake' else 'badge-success' }}"
+              >
+                {{ r.label }}
+              </span>
+            </td>
+            <td class="text-mono" style="color: #f85149">{{ r.fake_prob }}%</td>
+            <td class="text-mono" style="color: #3fb950">{{ r.real_prob }}%</td>
+            <td style="font-size: 12px">{{ r.source or '—' }}</td>
+            <td>
+              <div
+                style="
+                  background: var(--surface-3);
+                  border-radius: 99px;
+                  height: 6px;
+                  width: 80px;
+                "
+              >
+                <div
+                  style="
+                    width: {{ r.confidence }}%;
+                    background: {{ '#f85149' if r.label == 'Fake' else '#3fb950' }};
+                    border-radius: 99px;
+                    height: 6px;
+                  "
+                ></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <h3>No data to classify</h3>
+      <p>Collect posts first to run fake news detection.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if results %}
+<script>
+  // ── Pass Jinja data to JS safely ─────────────────────────────
+  const FAKE_COUNT = {{ fake_count | int }};
+  const REAL_COUNT = {{ real_count | int }};
+  const ALL_RESULTS = {{ results | tojson | safe }};
+
+  // ── 1. Doughnut Chart — Real vs Fake ─────────────────────────
+  (function () {
+    const canvas = document.getElementById('fakeNewsPie');
+    if (!canvas) return;
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['✅ Real', '🔴 Fake'],
+        datasets: [{
+          data           : [REAL_COUNT, FAKE_COUNT],
+          backgroundColor: ['#3fb950', '#f85149'],
+          borderColor    : ['#2ea043', '#da3633'],
+          borderWidth    : 2,
+          hoverOffset    : 8,
+        }]
+      },
+      options: {
+        responsive         : true,
+        maintainAspectRatio: false,
+        cutout             : '65%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels  : {
+              color   : '#e6edf3',
+              padding : 16,
+              font    : { size: 13 }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx =>
+                ` ${ctx.label}: ${ctx.parsed} posts ` +
+                `(${((ctx.parsed / (FAKE_COUNT + REAL_COUNT)) * 100).toFixed(1)}%)`
+            }
+          }
+        }
+      }
+    });
+  })();
+
+
+  // ── 2. Bar Chart — Confidence Score Buckets ──────────────────
+  (function () {
+    const canvas = document.getElementById('confidenceBar');
+    if (!canvas) return;
+
+    // Build 4 buckets based on fake_prob value
+    const buckets = { '0–25%': 0, '25–50%': 0, '50–75%': 0, '75–100%': 0 };
+    ALL_RESULTS.forEach(r => {
+      const fp = parseFloat(r.fake_prob) || 0;
+      if      (fp < 25)  buckets['0–25%']++;
+      else if (fp < 50)  buckets['25–50%']++;
+      else if (fp < 75)  buckets['50–75%']++;
+      else               buckets['75–100%']++;
+    });
+
+    // Color bars: low fake prob = green, high = red
+    const bgColors = ['#3fb950', '#d29922', '#e3693a', '#f85149'];
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels  : Object.keys(buckets),
+        datasets: [{
+          label          : 'Number of Posts',
+          data           : Object.values(buckets),
+          backgroundColor: bgColors,
+          borderColor    : bgColors,
+          borderWidth    : 1,
+          borderRadius   : 6,
+        }]
+      },
+      options: {
+        responsive         : true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: ctx => `Fake Probability: ${ctx[0].label}`,
+              label: ctx => ` ${ctx.parsed.y} posts`,
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid  : { color: 'rgba(255,255,255,0.05)' },
+            ticks : { color: '#8b949e', font: { size: 12 } },
+          },
+          y: {
+            beginAtZero: true,
+            grid       : { color: 'rgba(255,255,255,0.05)' },
+            ticks      : {
+              color    : '#8b949e',
+              font     : { size: 12 },
+              stepSize : 1,
+              precision: 0,
+            },
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %} {% endblock %}

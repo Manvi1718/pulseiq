@@ -1,0 +1,198 @@
+{% extends "base.html" %} {% block title %}Sentiment — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Sentiment</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Sentiment Analysis</h1>
+    <p class="page-subtitle">
+      NLP-based classification of posts as Positive, Negative or Neutral
+    </p>
+  </div>
+
+  {% if results %}
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Analysed</div>
+      <div class="kpi-value" data-count="{{ results|length }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Positive</div>
+      <div
+        class="kpi-value"
+        style="color: #3fb950"
+        data-count="{{ counts.Positive }}"
+      >
+        0
+      </div>
+      <div class="kpi-change positive">
+        {{ ((counts.Positive / results|length)*100)|round(1) }}%
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Negative</div>
+      <div
+        class="kpi-value"
+        style="color: #f85149"
+        data-count="{{ counts.Negative }}"
+      >
+        0
+      </div>
+      <div class="kpi-change negative">
+        {{ ((counts.Negative / results|length)*100)|round(1) }}%
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Neutral</div>
+      <div
+        class="kpi-value"
+        style="color: #8b949e"
+        data-count="{{ counts.Neutral }}"
+      >
+        0
+      </div>
+      <div class="kpi-change">
+        {{ ((counts.Neutral / results|length)*100)|round(1) }}%
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Sentiment Distribution</div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="sentimentPie"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Sentiment Score Distribution</div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="sentimentBar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Post Analysis Results</div>
+      <button
+        class="btn btn-secondary btn-sm"
+        onclick="exportTableCSV('sentimentTable', 'sentiment-results.csv')"
+      >
+        Export CSV
+      </button>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" id="sentimentTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Author</th>
+            <th>Post Text</th>
+            <th>Sentiment</th>
+            <th>Score</th>
+            <th>Likes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td class="text-mono text-xs">{{ loop.index }}</td>
+            <td style="font-weight: 500; font-size: 13px">{{ r.author }}</td>
+            <td
+              style="
+                font-size: 12px;
+                color: var(--text-muted);
+                max-width: 280px;
+              "
+            >
+              {{ r.text }}
+            </td>
+            <td>
+              <span
+                class="badge {% if r.label == 'Positive' %}badge-success {% elif r.label == 'Negative' %}badge-danger {% else %}badge-muted{% endif %}"
+              >
+                {{ r.label }}
+              </span>
+            </td>
+            <td class="text-mono" style="font-size: 13px">{{ r.score }}</td>
+            <td class="text-mono">{{ r.likes }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <svg
+        class="empty-state-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+        <line x1="9" y1="9" x2="9.01" y2="9" />
+        <line x1="15" y1="9" x2="15.01" y2="9" />
+      </svg>
+      <h3>No data to analyse</h3>
+      <p>Collect Facebook posts first, then come back here.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Go Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if results %}
+<script>
+  const counts = {
+    Positive: {{ counts.Positive }},
+    Negative: {{ counts.Negative }},
+    Neutral : {{ counts.Neutral  }},
+  };
+
+  createDoughnutChart(
+    'sentimentPie',
+    ['Positive','Negative','Neutral'],
+    [counts.Positive, counts.Negative, counts.Neutral],
+    ['#3fb950','#f85149','#8b949e']
+  );
+
+  const scores = {{ results | map(attribute='score') | list | tojson }};
+  const buckets = {'< -0.5':0, '-0.5 to 0':0, '0 to 0.5':0, '> 0.5':0};
+  scores.forEach(s => {
+    if      (s < -0.5) buckets['< -0.5']++;
+    else if (s <  0  ) buckets['-0.5 to 0']++;
+    else if (s <  0.5) buckets['0 to 0.5']++;
+    else               buckets['> 0.5']++;
+  });
+
+  createBarChart(
+    'sentimentBar',
+    Object.keys(buckets),
+    [{ label:'Posts', data: Object.values(buckets),
+       color:'#00d4ff' }]
+  );
+</script>
+{% endif %} {% endblock %}

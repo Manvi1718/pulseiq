@@ -1,0 +1,284 @@
+{% extends "base.html" %} {% block title %}Real-Time — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Real-Time</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Real-Time Monitoring</h1>
+      <p class="page-subtitle">
+        Live sentiment tracking and keyword alerts for
+        <span style="color: var(--cyan)">{{ case.keyword }}</span>
+      </p>
+    </div>
+    <div class="d-flex align-center gap-3">
+      <!-- Live indicator -->
+      <div class="d-flex align-center gap-2">
+        <div
+          style="
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+          "
+        ></div>
+        <span style="font-size: 12px; color: #3fb950; font-weight: 500"
+          >LIVE</span
+        >
+      </div>
+      <!-- Refresh Button -->
+      <a
+        href="{{ url_for('module_realtime', case_id=case.id) }}"
+        class="btn btn-secondary btn-sm"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 .49-4.95" />
+        </svg>
+        Refresh
+      </a>
+    </div>
+  </div>
+
+  {% if stats %}
+
+  <!-- Alerts Banner -->
+  <div class="mb-6">
+    {% for alert in stats.alerts %}
+    <div
+      class="alert alert-{{ alert.level }} mb-3"
+      style="font-size: 14px; font-weight: 500"
+    >
+      <span style="font-size: 18px">{{ alert.icon }}</span>
+      {{ alert.message }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Posts</div>
+      <div class="kpi-value" data-count="{{ stats.total_posts }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Recent (24h)</div>
+      <div class="kpi-value" data-count="{{ stats.recent_count }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Negative Sentiment</div>
+      <div
+        class="kpi-value"
+        style="color:{% if stats.neg_pct >= 40 %}#f85149{% elif stats.neg_pct >= 25 %}#d29922{% else %}#3fb950{% endif %};"
+      >
+        {{ stats.neg_pct }}%
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Last Updated</div>
+      <div
+        style="
+          font-size: 12px;
+          color: var(--text-muted);
+          margin-top: 8px;
+          font-family: var(--font-mono);
+        "
+      >
+        {{ stats.last_updated }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Live Sentiment Breakdown</div>
+        <div class="d-flex align-center gap-2">
+          <div
+            style="
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              background: #3fb950;
+              animation: pulse-dot 1.5s ease-in-out infinite;
+            "
+          ></div>
+          <span style="font-size: 11px; color: var(--text-muted)"
+            >updating</span
+          >
+        </div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="sentimentLiveChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Hourly Activity</div>
+      </div>
+      <div class="chart-container" style="height: 260px">
+        <canvas id="hourlyLiveChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Feed -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="d-flex align-center gap-2">
+          <div
+            style="
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              background: #3fb950;
+              animation: pulse-dot 1.5s ease-in-out infinite;
+            "
+          ></div>
+          Live Post Feed
+        </div>
+      </div>
+      <span class="badge badge-muted"
+        >Latest {{ stats.live_feed|length }} posts</span
+      >
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0">
+      {% for post in stats.live_feed %}
+      <div
+        style="
+          padding: 14px 0;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+        "
+      >
+        <!-- Avatar placeholder -->
+        <div
+          style="
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cyan);
+            flex-shrink: 0;
+          "
+        >
+          {{ post.author[0].upper() if post.author else '?' }}
+        </div>
+
+        <div style="flex: 1; min-width: 0">
+          <div class="d-flex align-center justify-between mb-1">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text)">
+              {{ post.author }}
+            </span>
+            <span
+              style="
+                font-size: 11px;
+                color: var(--text-faint);
+                font-family: var(--font-mono);
+              "
+            >
+              {{ post.time }}
+            </span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 6px">
+            {{ post.text }}
+          </p>
+          <div class="d-flex gap-3">
+            <span style="font-size: 12px; color: var(--text-faint)">
+              ❤️ {{ post.likes }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Auto-refresh script -->
+  <script>
+    // Auto-refresh every 60 seconds
+    let countdown = 60;
+    const timer = document.createElement("div");
+    timer.style.cssText = `
+      position:fixed; bottom:24px; right:24px;
+      background:var(--surface-2); border:1px solid var(--border);
+      border-radius:var(--radius-full); padding:8px 16px;
+      font-size:12px; color:var(--text-muted);
+      font-family:var(--font-mono); z-index:100;
+    `;
+    document.body.appendChild(timer);
+
+    setInterval(() => {
+      countdown--;
+      timer.textContent = `⏱ Auto-refresh in ${countdown}s`;
+      if (countdown <= 0) location.reload();
+    }, 1000);
+  </script>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <svg
+        class="empty-state-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+      <h3>No data to monitor</h3>
+      <p>Collect posts first to enable real-time monitoring.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if stats %}
+<script>
+  const sentiment = {{ stats.sentiment | tojson }};
+  const hourly    = {{ stats | tojson }};
+
+  createDoughnutChart(
+    'sentimentLiveChart',
+    ['Positive','Negative','Neutral'],
+    [sentiment.Positive, sentiment.Negative, sentiment.Neutral],
+    ['#3fb950','#f85149','#8b949e']
+  );
+
+  createBarChart(
+    'hourlyLiveChart',
+    hourly.hourly_labels,
+    [{ label:'Posts', data: hourly.hourly_counts, color:'#00d4ff' }]
+  );
+</script>
+{% endif %} {% endblock %}

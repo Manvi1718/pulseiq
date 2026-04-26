@@ -1,0 +1,255 @@
+{% extends "base.html" %} {% block title %}Ad Campaign — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Ad Campaign</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Ad Campaign Optimization</h1>
+    <p class="page-subtitle">
+      Calculate CTR, Conversion Rate, ROI and get optimization tips
+    </p>
+  </div>
+
+  <div class="grid-2" style="align-items: start">
+    <!-- Input Form -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Campaign Inputs</div>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('calculate_ad_metrics', case_id=case.id) }}"
+      >
+        <div class="form-group">
+          <label class="form-label">Impressions</label>
+          <input
+            type="number"
+            name="impressions"
+            class="form-control"
+            placeholder="e.g. 50000"
+            min="1"
+            required
+            value="{{ metrics.impressions if metrics else '' }}"
+          />
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+            Total number of times ad was shown
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Clicks</label>
+          <input
+            type="number"
+            name="clicks"
+            class="form-control"
+            placeholder="e.g. 1200"
+            min="1"
+            required
+            value="{{ metrics.clicks if metrics else '' }}"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Conversions</label>
+          <input
+            type="number"
+            name="conversions"
+            class="form-control"
+            placeholder="e.g. 80"
+            min="0"
+            required
+            value="{{ metrics.conversions if metrics else '' }}"
+          />
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+            Purchases, sign-ups, or target actions
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ad Spend (₹ or $)</label>
+          <input
+            type="number"
+            name="spend"
+            class="form-control"
+            placeholder="e.g. 5000"
+            min="0.01"
+            step="0.01"
+            required
+            value="{{ metrics.spend if metrics else '' }}"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Revenue Generated (₹ or $)</label>
+          <input
+            type="number"
+            name="revenue"
+            class="form-control"
+            placeholder="e.g. 12000"
+            min="0"
+            step="0.01"
+            required
+            value="{{ metrics.revenue if metrics else '' }}"
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          Calculate Metrics
+        </button>
+      </form>
+    </div>
+
+    <!-- Results -->
+    <div>
+      {% if metrics %}
+
+      <!-- KPI Cards -->
+      <div class="grid-2 mb-4" style="gap: 12px">
+        <div class="kpi-card">
+          <div class="kpi-label">CTR</div>
+          <div class="kpi-value" style="color:{{ metrics.ctr_rating[1] }};">
+            {{ metrics.ctr }}%
+          </div>
+          <span
+            class="badge"
+            style="background:{{ metrics.ctr_rating[1] }}22;
+                       color:{{ metrics.ctr_rating[1] }};"
+          >
+            {{ metrics.ctr_rating[0] }}
+          </span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Conversion Rate</div>
+          <div class="kpi-value" style="color:{{ metrics.conv_rating[1] }};">
+            {{ metrics.conversion_rate }}%
+          </div>
+          <span
+            class="badge"
+            style="background:{{ metrics.conv_rating[1] }}22;
+                       color:{{ metrics.conv_rating[1] }};"
+          >
+            {{ metrics.conv_rating[0] }}
+          </span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">ROI</div>
+          <div class="kpi-value" style="color:{{ metrics.roi_rating[1] }};">
+            {{ metrics.roi }}%
+          </div>
+          <span
+            class="badge"
+            style="background:{{ metrics.roi_rating[1] }}22;
+                       color:{{ metrics.roi_rating[1] }};"
+          >
+            {{ metrics.roi_rating[0] }}
+          </span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">ROAS</div>
+          <div class="kpi-value">{{ metrics.roas }}x</div>
+          <div class="kpi-change" style="color: var(--text-muted)">
+            Return on Ad Spend
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Cost Per Click</div>
+          <div class="kpi-value" style="font-size: 22px">{{ metrics.cpc }}</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Cost Per Acquisition</div>
+          <div class="kpi-value" style="font-size: 22px">{{ metrics.cpa }}</div>
+        </div>
+      </div>
+
+      <!-- Profit Summary -->
+      <div
+        class="card mb-4"
+        style="border-color:{{ '#3fb950' if metrics.profit >= 0 else '#f85149' }}44;"
+      >
+        <div class="d-flex align-center justify-between">
+          <div>
+            <div class="kpi-label">Net Profit</div>
+            <div
+              style="font-size:28px; font-weight:700; font-family:var(--font-mono);
+                        color:{{ '#3fb950' if metrics.profit >= 0 else '#f85149' }};"
+            >
+              {{ '+' if metrics.profit >= 0 else '' }}{{ metrics.profit }}
+            </div>
+          </div>
+          <div style="font-size: 40px">
+            {{ '📈' if metrics.profit >= 0 else '📉' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Optimization Suggestions -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Optimization Suggestions</div>
+        </div>
+        {% for s in metrics.suggestions %}
+        <div
+          style="
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+          "
+        >
+          <div style="font-size: 22px">{{ s.icon }}</div>
+          <div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 3px">
+              {{ s.title }}
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted)">
+              {{ s.text }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="card">
+        <div class="empty-state" style="padding: 40px">
+          <svg
+            class="empty-state-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+          <h3>Enter campaign data</h3>
+          <p>
+            Fill in the form on the left to calculate your ad campaign metrics.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

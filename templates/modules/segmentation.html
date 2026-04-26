@@ -1,0 +1,143 @@
+{% extends "base.html" %} {% block title %}Segmentation — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Segmentation</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">User Segmentation</h1>
+    <p class="page-subtitle">
+      KMeans clustering of users by posting behavior and engagement
+    </p>
+  </div>
+
+  {% if segments %}
+
+  <!-- Segment Cards -->
+  <div class="grid-2 mb-6">
+    {% set seg_colors = ['#00d4ff','#3fb950','#f85149','#d29922','#bc8cff'] %}
+    {% for seg in segments %}
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex align-center gap-3">
+          <div
+            style="width:12px; height:12px; border-radius:50%;
+                      background:{{ seg_colors[loop.index0 % 5] }};
+                      flex-shrink:0;"
+          ></div>
+          <div class="card-title">{{ seg.name }}</div>
+        </div>
+        <span class="badge badge-cyan">{{ seg.user_count }} users</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px">
+        {{ seg.description }}
+      </p>
+      <div class="d-flex gap-4 mb-4">
+        <div>
+          <div
+            style="
+              font-size: 11px;
+              color: var(--text-faint);
+              text-transform: uppercase;
+            "
+          >
+            Avg Likes
+          </div>
+          <div
+            style="font-size:18px; font-weight:700; font-family:var(--font-mono);
+                      color:{{ seg_colors[loop.index0 % 5] }};"
+          >
+            {{ seg.avg_likes }}
+          </div>
+        </div>
+        <div>
+          <div
+            style="
+              font-size: 11px;
+              color: var(--text-faint);
+              text-transform: uppercase;
+            "
+          >
+            Users
+          </div>
+          <div
+            style="
+              font-size: 18px;
+              font-weight: 700;
+              font-family: var(--font-mono);
+            "
+          >
+            {{ seg.user_count }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Top users in segment -->
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        {% for user in seg.users[:6] %}
+        <span class="badge badge-muted">{{ user.author[:15] }}</span>
+        {% endfor %} {% if seg.users|length > 6 %}
+        <span class="badge badge-muted">+{{ seg.users|length - 6 }} more</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Charts -->
+  <div class="grid-2 mb-6">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">User Distribution</div>
+      </div>
+      <div class="chart-container" style="height: 260px; position: relative">
+        <canvas id="segPie"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Avg Likes by Segment</div>
+      </div>
+      <div class="chart-container" style="height: 260px; position: relative">
+        <canvas id="segBar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <h3>No segmentation data</h3>
+      <p>Collect posts first to segment users.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if segments %}
+<script>
+  const segments = {{ segments | tojson }};
+  const colors   = ['#00d4ff','#3fb950','#f85149','#d29922','#bc8cff'];
+
+  createDoughnutChart(
+    'segPie',
+    segments.map(s => s.name),
+    segments.map(s => s.user_count),
+    colors
+  );
+
+  createBarChart(
+    'segBar',
+    segments.map(s => s.name),
+    [{ label:'User Count', data: segments.map(s => s.user_count), color:'#00d4ff' }]
+  );
+</script>
+{% endif %} {% endblock %}

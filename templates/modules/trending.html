@@ -1,0 +1,143 @@
+{% extends "base.html" %} {% block title %}Trending — {{ case.name }}{% endblock
+%} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Trending</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Trending Topics</h1>
+    <p class="page-subtitle">Top hashtags and keywords ranked by frequency</p>
+  </div>
+
+  {% if hashtags or keywords %}
+
+  <div class="grid-2 mb-6">
+    <!-- Top Hashtags Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Top Hashtags</div>
+        <span class="badge badge-cyan">{{ hashtags|length }} found</span>
+      </div>
+      {% if hashtags %}
+      <div class="chart-container" style="height: 320px">
+        <canvas id="hashtagChart"></canvas>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding: 32px">
+        <p>No hashtags found in posts.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Top Keywords Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Top Keywords (TF-IDF)</div>
+        <span class="badge badge-info">{{ keywords|length }} found</span>
+      </div>
+      {% if keywords %}
+      <div class="chart-container" style="height: 320px">
+        <canvas id="keywordChart"></canvas>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding: 32px">
+        <p>Not enough text data for keyword extraction.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Hashtag Table -->
+  {% if hashtags %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Hashtag Rankings</div>
+      <button
+        class="btn btn-secondary btn-sm"
+        onclick="exportTableCSV('hashtagTable', 'trending-hashtags.csv')"
+      >
+        Export CSV
+      </button>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" id="hashtagTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Hashtag</th>
+            <th>Frequency</th>
+            <th>Trend Bar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set max_count = hashtags[0].count if hashtags else 1 %} {% for h in
+          hashtags %}
+          <tr>
+            <td class="text-mono text-xs">#{{ loop.index }}</td>
+            <td>
+              <span style="color: var(--cyan); font-weight: 600">
+                {{ h.tag }}
+              </span>
+            </td>
+            <td class="text-mono">{{ h.count }}</td>
+            <td style="width: 200px">
+              <div
+                style="
+                  background: var(--surface-3);
+                  border-radius: 99px;
+                  height: 6px;
+                "
+              >
+                <div
+                  style="width:{{ ((h.count/max_count)*100)|round }}%;
+                            background:var(--cyan); border-radius:99px; height:6px;"
+                ></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %} {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <h3>No trending data</h3>
+      <p>Collect posts first to see trending topics.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if hashtags %}
+<script>
+  createBarChart(
+    'hashtagChart',
+    {{ hashtags[:10] | map(attribute='tag')   | list | tojson }},
+    [{ label:'Frequency',
+       data : {{ hashtags[:10] | map(attribute='count') | list | tojson }},
+       color:'#00d4ff' }],
+    true   // horizontal
+  );
+</script>
+{% endif %} {% if keywords %}
+<script>
+  createBarChart(
+    'keywordChart',
+    {{ keywords[:10] | map(attribute='word')  | list | tojson }},
+    [{ label:'TF-IDF Score',
+       data : {{ keywords[:10] | map(attribute='score') | list | tojson }},
+       color:'#58a6ff' }],
+    true
+  );
+</script>
+{% endif %} {% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %} {% block title %}Network — {{ case.name }}{% endblock
+%} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Network</span>
+{% endblock %} {% block extra_css %}
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Network Analysis</h1>
+    <p class="page-subtitle">
+      Social graph of authors and mentions — communities, influencers,
+      connectors
+    </p>
+  </div>
+
+  {% if stats %}
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Nodes (Users)</div>
+      <div class="kpi-value" data-count="{{ stats.node_count }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Edges (Connections)</div>
+      <div class="kpi-value" data-count="{{ stats.edge_count }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Communities</div>
+      <div class="kpi-value" data-count="{{ stats.communities }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Graph Density</div>
+      <div class="kpi-value" style="font-size: 22px">{{ stats.density }}</div>
+    </div>
+  </div>
+
+  <!-- Network Graph -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <div class="card-title">Interactive Social Graph</div>
+      <span class="badge badge-cyan">Drag nodes to explore</span>
+    </div>
+    <div
+      id="networkGraph"
+      style="
+        height: 500px;
+        background: var(--surface-2);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      "
+    ></div>
+  </div>
+
+  <!-- Top Nodes Table -->
+  {% if stats.top_nodes %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Top Connected Users</div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>User</th>
+            <th>Degree Centrality</th>
+            <th>Influence Bar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set max_score = stats.top_nodes[0].score if stats.top_nodes else 1
+          %} {% for node in stats.top_nodes %}
+          <tr>
+            <td class="text-mono text-xs">#{{ loop.index }}</td>
+            <td style="font-weight: 500; color: var(--cyan)">
+              {{ node.name }}
+            </td>
+            <td class="text-mono">{{ node.score }}</td>
+            <td style="width: 200px">
+              <div
+                style="
+                  background: var(--surface-3);
+                  border-radius: 99px;
+                  height: 6px;
+                "
+              >
+                <div
+                  style="width:{{ ((node.score / max_score)*100)|round if max_score > 0 else 0 }}%;
+                            background:var(--cyan); border-radius:99px; height:6px;"
+                ></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %} {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <h3>No network data</h3>
+      <p>Collect posts with @mentions to build the social graph.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if stats and stats.node_count > 0 %}
+<script>
+  const networkData = {{ network_data | safe }};
+
+  const container = document.getElementById('networkGraph');
+  const data = {
+    nodes: new vis.DataSet(networkData.nodes),
+    edges: new vis.DataSet(networkData.edges),
+  };
+  const options = {
+    nodes: {
+      shape     : 'dot',
+      font      : { color: '#e6edf3', size: 12, face: 'Inter' },
+      borderWidth: 2,
+    },
+    edges: {
+      color  : { color: 'rgba(255,255,255,0.15)', highlight: '#00d4ff' },
+      smooth : { type: 'continuous' },
+      width  : 1,
+    },
+    physics: {
+      stabilization: { iterations: 100 },
+      barnesHut    : { gravitationalConstant: -8000, springLength: 120 },
+    },
+    interaction: { hover: true, tooltipDelay: 100 },
+    background : { color: 'transparent' },
+  };
+  new vis.Network(container, data, options);
+</script>
+{% endif %} {% endblock %}

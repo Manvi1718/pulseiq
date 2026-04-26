@@ -1,0 +1,418 @@
+{% extends "base.html" %} {% block title %}Prediction — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Prediction</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Popularity Prediction</h1>
+    <p class="page-subtitle">
+      Gradient Boosting model predicts engagement (likes) for each post
+    </p>
+  </div>
+
+  {% if results and results.predictions %}
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Posts Analysed</div>
+      <div class="kpi-value" data-count="{{ results.total_posts }}">0</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Model Accuracy (R²)</div>
+      {% if results.accuracy >= 50 %}
+      <div
+        class="kpi-value"
+        style="color: #3fb950"
+        data-count="{{ results.accuracy }}"
+      >
+        0
+      </div>
+      <div class="kpi-change positive">Good predictive signal</div>
+      {% elif results.accuracy >= 15 %}
+      <div
+        class="kpi-value"
+        style="color: #d29922"
+        data-count="{{ results.accuracy }}"
+      >
+        0
+      </div>
+      <div class="kpi-change" style="color: #d29922">Moderate signal</div>
+      {% else %}
+      <div
+        class="kpi-value"
+        style="color: #f85149"
+        data-count="{{ results.accuracy }}"
+      >
+        0
+      </div>
+      <div class="kpi-change negative">Collect more posts</div>
+      {% endif %}
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px">
+        {{ results.accuracy }}% R² · typical range 15–60% for social data
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Algorithm</div>
+      <div
+        class="kpi-value"
+        style="font-size: 13px; padding-top: 8px; font-family: monospace"
+      >
+        Gradient Boosting
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+        200 estimators · depth 3
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Top Predicted Post</div>
+      <div class="kpi-value" data-count="{{ results.top_predicted }}">0</div>
+      <div class="kpi-change" style="color: var(--text-muted)">
+        predicted likes
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-2 mb-6">
+    <!-- Feature Importance -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Feature Importance</div>
+        <span class="badge badge-cyan">What drives likes?</span>
+      </div>
+      <!-- ✅ increased height so all labels visible -->
+      <div class="chart-container" style="height: 380px; position: relative">
+        <canvas id="featureChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Actual vs Predicted -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Actual vs Predicted Likes</div>
+        <span class="badge badge-muted">Top 10 posts</span>
+      </div>
+      <div class="chart-container" style="height: 380px; position: relative">
+        <canvas id="actualPredChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Predictions Table -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <div class="card-title">Post Predictions</div>
+      <button
+        class="btn btn-secondary btn-sm"
+        onclick="exportTableCSV('predTable', 'predictions.csv')"
+      >
+        Export CSV
+      </button>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" id="predTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Author</th>
+            <th>Post Text</th>
+            <th>Actual Likes</th>
+            <th>Predicted</th>
+            <th>Source</th>
+            <th>Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in results.predictions %}
+          <tr>
+            <td class="text-mono text-xs">{{ loop.index }}</td>
+            <td style="font-weight: 500; font-size: 13px; color: var(--cyan)">
+              {{ p.author }}
+            </td>
+            <td
+              style="
+                font-size: 12px;
+                color: var(--text-muted);
+                max-width: 260px;
+              "
+            >
+              {{ p.text }}
+            </td>
+            <td class="text-mono">{{ p.actual }}</td>
+            <td class="text-mono" style="color: var(--cyan); font-weight: 600">
+              {{ p.predicted }}
+            </td>
+            <td style="font-size: 12px">{{ p.source or '—' }}</td>
+            <td>
+              <span
+                class="badge
+                {{ 'badge-success' if p.diff > 0 else 'badge-danger' }}"
+              >
+                {{ '+' if p.diff > 0 else '' }}{{ p.diff }} ({{ p.diff_label }})
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Predict New Post -->
+  <div class="card mt-6">
+    <div class="card-header">
+      <div class="card-title">🔮 Predict Engagement for New Post</div>
+    </div>
+    <form
+      method="POST"
+      action="{{ url_for('predict_new_post', case_id=case.id) }}"
+    >
+      <div class="grid-2" style="gap: 16px">
+        <div class="form-group" style="margin: 0">
+          <label class="form-label">Post Text</label>
+          <textarea
+            name="post_text"
+            class="form-control"
+            rows="3"
+            placeholder="Enter your post text here..."
+            required
+          ></textarea>
+        </div>
+        <div>
+          <div class="form-group">
+            <label class="form-label">Hour to Post (0–23)</label>
+            <input
+              type="number"
+              name="hour"
+              class="form-control"
+              min="0"
+              max="23"
+              value="12"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Day of Week (0=Mon, 6=Sun)</label>
+            <input
+              type="number"
+              name="day"
+              class="form-control"
+              min="0"
+              max="6"
+              value="1"
+            />
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary mt-4">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+        Predict Likes
+      </button>
+    </form>
+
+    {% if new_prediction %}
+    <div
+      style="
+        margin-top: 20px;
+        padding: 20px;
+        background: var(--surface-2);
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        text-align: center;
+      "
+    >
+      <div
+        style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px"
+      >
+        Predicted Engagement for your post
+      </div>
+      <div
+        style="
+          font-size: 48px;
+          font-weight: 800;
+          font-family: var(--font-mono);
+          color: var(--cyan);
+        "
+      >
+        {{ new_prediction }} likes
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <svg
+        class="empty-state-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+      <h3>Not enough data</h3>
+      <p>Need at least 10 posts to train the prediction model.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %} {% if results and results.predictions %}
+<script>
+  const FEATURES = {{ results.features | tojson | safe }};
+  const PREDS    = {{ results.predictions[:10] | tojson | safe }};
+
+  // ── 1. Feature Importance — horizontal bar ────────────────
+  (function () {
+    const canvas = document.getElementById('featureChart');
+    if (!canvas) return;
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels  : FEATURES.map(f => f.name),
+        datasets: [{
+          label          : 'Importance %',
+          data           : FEATURES.map(f => f.importance),
+          backgroundColor: 'rgba(0,212,255,0.25)',
+          borderColor    : '#00d4ff',
+          borderWidth    : 1.5,
+          borderRadius   : 4,
+        }]
+      },
+      options: {
+        indexAxis          : 'y',
+        responsive         : true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend : { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.x.toFixed(1)}% importance`
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid : { color: 'rgba(255,255,255,0.05)' },
+            ticks: {
+              color   : '#8b949e',
+              font    : { size: 11 },
+              callback: val => val + '%',
+            },
+          },
+          y: {
+            grid : { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { size: 11 } },
+          }
+        }
+      }
+    });
+  })();
+
+  // ── 2. Actual vs Predicted — log scale grouped bar ────────
+  (function () {
+    const canvas = document.getElementById('actualPredChart');
+    if (!canvas) return;
+
+    // Check if data spans a wide range — use log scale if so
+    const allVals  = [
+      ...PREDS.map(p => p.actual),
+      ...PREDS.map(p => p.predicted)
+    ].filter(v => v > 0);
+
+    const maxVal   = Math.max(...allVals);
+    const minVal   = Math.min(...allVals.filter(v => v > 0));
+    const useLog   = maxVal > 0 && minVal > 0 && (maxVal / minVal) > 50;
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels  : PREDS.map((_, i) => `Post ${i + 1}`),
+        datasets: [
+          {
+            label          : 'Actual',
+            data           : PREDS.map(p => Math.max(p.actual, 1)),
+            backgroundColor: 'rgba(63,185,80,0.3)',
+            borderColor    : '#3fb950',
+            borderWidth    : 1.5,
+            borderRadius   : 4,
+          },
+          {
+            label          : 'Predicted',
+            data           : PREDS.map(p => Math.max(p.predicted, 1)),
+            backgroundColor: 'rgba(0,212,255,0.25)',
+            borderColor    : '#00d4ff',
+            borderWidth    : 1.5,
+            borderRadius   : 4,
+          }
+        ]
+      },
+      options: {
+        responsive         : true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#e6edf3', font: { size: 12 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx =>
+                ` ${ctx.dataset.label}: ${
+                  ctx.parsed.y >= 1000
+                  ? (ctx.parsed.y / 1000).toFixed(1) + 'k'
+                  : ctx.parsed.y
+                } likes`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid : { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { size: 11 } },
+          },
+          y: {
+            // ✅ auto log scale when range is wide
+            type       : useLog ? 'logarithmic' : 'linear',
+            beginAtZero: !useLog,
+            grid       : { color: 'rgba(255,255,255,0.05)' },
+            ticks      : {
+              color   : '#8b949e',
+              font    : { size: 11 },
+              precision: 0,
+              callback: val =>
+                val >= 1000
+                ? (val / 1000).toFixed(0) + 'k'
+                : val,
+            }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %} {% endblock %}

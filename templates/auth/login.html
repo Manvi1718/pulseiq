@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — PulseIQ</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Our CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <!-- Logo -->
+        <div class="auth-logo">
+          <div class="auth-logo-mark">P</div>
+          <div class="auth-logo-text">Pulse<span>IQ</span></div>
+        </div>
+
+        <!-- Title -->
+        <h1 class="auth-title">Welcome back</h1>
+        <p class="auth-subtitle">Sign in to your analytics dashboard</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom: 16px">
+          {{ message }}
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <!-- Login Form -->
+        <form method="POST" action="{{ url_for('login') }}">
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="Enter your username"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <!-- Show/Hide Password Toggle -->
+          <div class="form-group" style="margin-top: -10px">
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 13px;
+                color: var(--text-muted);
+              "
+            >
+              <input
+                type="checkbox"
+                id="showPassword"
+                style="accent-color: var(--cyan)"
+              />
+              Show password
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-full btn-lg"
+            style="margin-top: 8px"
+          >
+            Sign In
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider"></div>
+
+        <!-- Register Link -->
+        <p
+          style="text-align: center; font-size: 14px; color: var(--text-muted)"
+        >
+          Don't have an account?
+          <a
+            href="{{ url_for('register') }}"
+            style="color: var(--cyan); font-weight: 500"
+          >
+            Create one free
+          </a>
+        </p>
+
+        <!-- Footer note -->
+        <p
+          style="
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-faint);
+            margin-top: 24px;
+          "
+        >
+          PulseIQ — Social Media Intelligence Platform
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // Show/Hide password toggle
+      document
+        .getElementById("showPassword")
+        .addEventListener("change", function () {
+          const pwd = document.getElementById("password");
+          pwd.type = this.checked ? "text" : "password";
+        });
+    </script>
+  </body>
+</html>

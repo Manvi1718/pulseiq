@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Competitor — {{ case.name }}{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Competitor</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Competitor Analysis</h1>
+    <p class="page-subtitle">Compare two keywords side-by-side on growth, engagement and strategy</p>
+  </div>
+
+  <!-- Input Form -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <div class="card-title">Compare Two Keywords</div>
+    </div>
+    <form method="GET" action="{{ url_for('module_competitor', case_id=case.id) }}">
+
+      <!-- Row 1: Keywords -->
+      <div class="grid-2" style="gap: 16px; align-items: end;">
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label">Brand A Keyword</label>
+          <input type="text" name="keyword_a" class="form-control"
+            placeholder="e.g. NASA"
+            value="{{ keyword_a or case.keyword }}" required />
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label">Brand B Keyword</label>
+          <input type="text" name="keyword_b" class="form-control"
+            placeholder="e.g. ISRO"
+            value="{{ keyword_b or '' }}" required />
+        </div>
+      </div>
+
+      <!-- Row 2: Case selectors -->
+      <div class="grid-2" style="gap: 16px; align-items: end; margin-top: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+            Brand A — Data Source
+          </label>
+          <input class="form-control"
+            style="background: var(--surface-2); color: var(--text-muted); cursor: not-allowed;"
+            value="{{ case.name }} (current case)" disabled />
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+            Brand B — Load from Case
+          </label>
+          <select name="case_b_id" class="form-control">
+            <option value="">— Filter from current case —</option>
+            {% for c in all_cases %}
+              {% if c.id != case.id %}
+                <option value="{{ c.id }}" {{ 'selected' if case_b_id == c.id else '' }}>{{ c.name }} · {{ c.keyword }} · {{ c.post_count or 0 }} posts</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="alert alert-info mt-4" style="margin-bottom: 16px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span style="font-size: 13px;">
+          Select a different case for Brand B to compare across cases. Brand A always uses the current case's posts.
+        </span>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        Run Comparison
+      </button>
+    </form>
+  </div>
+
+  {% if comparison %}
+
+    {% if comparison.stats_a.no_data %}
+    <div class="alert alert-warning mb-4">
+      ⚠️ No posts found for <strong>"{{ comparison.stats_a.name }}"</strong> in this case.
+      This case was collected with keyword <strong>"{{ case.keyword }}"</strong>.
+      For a real comparison, select a case with keyword "{{ comparison.stats_a.name }}" from the dropdown above.
+    </div>
+    {% endif %}
+
+    {% if comparison.stats_b.no_data %}
+    <div class="alert alert-warning mb-4">
+      ⚠️ No posts found for <strong>"{{ comparison.stats_b.name }}"</strong>.
+      {% if not case_b_id %}
+        Try selecting a different case for Brand B using the dropdown above.
+      {% else %}
+        The selected case has no posts matching this keyword.
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Engagement Cards -->
+    <div class="grid-2 mb-6">
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 8px;">🔵</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--cyan);">{{ comparison.stats_a.name }}</div>
+        <div class="kpi-value" style="font-size: 28px; margin-top: 8px;">{{ comparison.stats_a.avg_engagement }}</div>
+        <div class="kpi-label">Avg Engagement</div>
+        <div style="margin-top: 8px; font-size: 13px; color: var(--text-muted);">{{ comparison.stats_a.post_count }} posts analysed</div>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 8px;">🔴</div>
+        <div style="font-size: 20px; font-weight: 700; color: #f85149;">{{ comparison.stats_b.name }}</div>
+        <div class="kpi-value" style="font-size: 28px; margin-top: 8px;">{{ comparison.stats_b.avg_engagement }}</div>
+        <div class="kpi-label">Avg Engagement</div>
+        <div style="margin-top: 8px; font-size: 13px; color: var(--text-muted);">{{ comparison.stats_b.post_count }} posts analysed</div>
+      </div>
+    </div>
+
+    <!-- Head-to-Head Chart -->
+    <div class="card mb-6">
+      <div class="card-header">
+        <div class="card-title">Head-to-Head Comparison</div>
+        <span style="font-size: 12px; color: var(--text-muted);">{{ comparison.stats_a.name }} vs {{ comparison.stats_b.name }}</span>
+      </div>
+      <div class="chart-container" style="height: 320px; position: relative;">
+        <canvas id="competitorChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Metric Winners Table -->
+    <div class="card mb-6">
+      <div class="card-header">
+        <div class="card-title">Metric Winners</div>
+      </div>
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>{{ comparison.stats_a.name }}</th>
+              <th>{{ comparison.stats_b.name }}</th>
+              <th>Winner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Posts</td>
+              <td class="text-mono">{{ comparison.stats_a.post_count }}</td>
+              <td class="text-mono">{{ comparison.stats_b.post_count }}</td>
+              <td><span class="badge badge-cyan">{{ comparison.winners.posts }}</span></td>
+            </tr>
+            <tr>
+              <td>Avg Likes</td>
+              <td class="text-mono">{{ comparison.stats_a.avg_likes }}</td>
+              <td class="text-mono">{{ comparison.stats_b.avg_likes }}</td>
+              <td><span class="badge badge-success">{{ comparison.winners.likes }}</span></td>
+            </tr>
+            <tr>
+              <td>Avg Shares</td>
+              <td class="text-mono">{{ comparison.stats_a.avg_shares }}</td>
+              <td class="text-mono">{{ comparison.stats_b.avg_shares }}</td>
+              <td><span class="badge badge-info">{{ comparison.winners.shares }}</span></td>
+            </tr>
+            <tr>
+              <td>Avg Engagement</td>
+              <td class="text-mono">{{ comparison.stats_a.avg_engagement }}</td>
+              <td class="text-mono">{{ comparison.stats_b.avg_engagement }}</td>
+              <td><span class="badge badge-warning">{{ comparison.winners.engagement }}</span></td>
+            </tr>
+            <tr>
+              <td>Unique Authors</td>
+              <td class="text-mono">{{ comparison.stats_a.unique_authors }}</td>
+              <td class="text-mono">{{ comparison.stats_b.unique_authors }}</td>
+              <td><span class="badge badge-cyan">{{ comparison.winners.reach }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top Hashtags per Brand -->
+    {% if comparison.stats_a.top_hashtags or comparison.stats_b.top_hashtags %}
+    <div class="grid-2 mb-6">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Hashtags — {{ comparison.stats_a.name }}</div>
+        </div>
+        {% if comparison.stats_a.top_hashtags %}
+          {% for item in comparison.stats_a.top_hashtags %}
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+            <span style="color: var(--cyan); font-weight: 500;">{{ item.tag }}</span>
+            <span class="badge badge-cyan">{{ item.count }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 13px;">No hashtags found.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Hashtags — {{ comparison.stats_b.name }}</div>
+        </div>
+        {% if comparison.stats_b.top_hashtags %}
+          {% for item in comparison.stats_b.top_hashtags %}
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+            <span style="color: #f85149; font-weight: 500;">{{ item.tag }}</span>
+            <span class="badge badge-danger">{{ item.count }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 13px;">No hashtags found.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if comparison %}
+<script>
+  const COMP = {{ comparison | tojson | safe }};
+
+  (function () {
+    const canvas = document.getElementById('competitorChart');
+    if (!canvas) return;
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: COMP.chart_labels,
+        datasets: [
+          {
+            label: COMP.stats_a.name,
+            data: COMP.chart_a,
+            backgroundColor: 'rgba(0, 212, 255, 0.25)',
+            borderColor: '#00d4ff',
+            borderWidth: 1.5,
+            borderRadius: 6,
+          },
+          {
+            label: COMP.stats_b.name,
+            data: COMP.chart_b,
+            backgroundColor: 'rgba(248, 81, 73, 0.25)',
+            borderColor: '#f85149',
+            borderWidth: 1.5,
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: '#e6edf3', font: { size: 13 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { size: 12 }, precision: 0 }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

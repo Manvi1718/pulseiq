@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register — PulseIQ</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Our CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="auth-wrapper">
+      <div class="auth-card" style="max-width: 460px">
+        <!-- Logo -->
+        <div class="auth-logo">
+          <div class="auth-logo-mark">P</div>
+          <div class="auth-logo-text">Pulse<span>IQ</span></div>
+        </div>
+
+        <!-- Title -->
+        <h1 class="auth-title">Create account</h1>
+        <p class="auth-subtitle">Start analyzing social media in minutes</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom: 16px">
+          {{ message }}
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <!-- Register Form -->
+        <form method="POST" action="{{ url_for('register') }}">
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="Choose a username"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Min 6 characters"
+              required
+              minlength="6"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirm_password"
+              >Confirm Password</label
+            >
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              class="form-control"
+              placeholder="Repeat your password"
+              required
+            />
+            <!-- Live match indicator -->
+            <p id="matchMsg" style="font-size: 12px; margin-top: 5px"></p>
+          </div>
+
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn btn-primary btn-full btn-lg"
+            style="margin-top: 8px"
+          >
+            Create Account
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" />
+              <line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider"></div>
+
+        <!-- Login Link -->
+        <p
+          style="text-align: center; font-size: 14px; color: var(--text-muted)"
+        >
+          Already have an account?
+          <a
+            href="{{ url_for('login') }}"
+            style="color: var(--cyan); font-weight: 500"
+          >
+            Sign in
+          </a>
+        </p>
+
+        <p
+          style="
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-faint);
+            margin-top: 24px;
+          "
+        >
+          PulseIQ — Social Media Intelligence Platform
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // Live password match checker
+      const pwd = document.getElementById("password");
+      const confirm = document.getElementById("confirm_password");
+      const msg = document.getElementById("matchMsg");
+      const btn = document.getElementById("submitBtn");
+
+      function checkMatch() {
+        if (confirm.value === "") {
+          msg.textContent = "";
+          return;
+        }
+        if (pwd.value === confirm.value) {
+          msg.textContent = "✓ Passwords match";
+          msg.style.color = "#3fb950";
+          btn.disabled = false;
+        } else {
+          msg.textContent = "✗ Passwords do not match";
+          msg.style.color = "#f85149";
+          btn.disabled = true;
+        }
+      }
+
+      pwd.addEventListener("input", checkMatch);
+      confirm.addEventListener("input", checkMatch);
+    </script>
+  </body>
+</html>

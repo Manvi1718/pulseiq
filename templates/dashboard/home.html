@@ -1,0 +1,172 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">My Cases</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <!-- Page Header -->
+  <div class="page-header d-flex align-center justify-between">
+    <div>
+      <h1 class="page-title">My Cases</h1>
+      <p class="page-subtitle">Each case is a social media analysis project</p>
+    </div>
+    <a href="{{ url_for('case_new') }}" class="btn btn-primary">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      New Case
+    </a>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="grid-4 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Cases</div>
+      <div class="kpi-value" data-count="{{ cases|length }}">0</div>
+      <div class="kpi-change positive">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+        Active projects
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Total Posts</div>
+      <div
+        class="kpi-value"
+        data-count="{{ cases|sum(attribute='post_count') }}"
+      >
+        0
+      </div>
+      <div class="kpi-change positive">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+        Across all cases
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Platform</div>
+      <div class="kpi-value" style="font-size: 20px; padding-top: 4px">
+        Facebook
+      </div>
+      <div class="kpi-change" style="color: var(--info)">via Apify API</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Analyst</div>
+      <div class="kpi-value" style="font-size: 20px; padding-top: 4px">
+        {{ current_user.username }}
+      </div>
+      <div class="kpi-change" style="color: var(--text-muted)">Logged in</div>
+    </div>
+  </div>
+
+  <!-- Cases Grid -->
+  {% if cases %}
+
+  <div class="cases-grid">
+    {% for case in cases %}
+    <a href="{{ url_for('case_detail', case_id=case.id) }}" class="case-card">
+      <div class="case-card-header">
+        <div>
+          <div class="case-card-name">{{ case.name }}</div>
+          <div class="case-card-meta">
+            🔍 {{ case.keyword }} &nbsp;·&nbsp; {{ case.created_at.strftime('%d
+            %b %Y') }}
+          </div>
+        </div>
+        <span class="badge badge-info">{{ case.platform }}</span>
+      </div>
+
+      {% if case.description %}
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px">
+        {{ case.description[:80] }}{% if case.description|length > 80 %}…{%
+        endif %}
+      </p>
+      {% endif %}
+
+      <div class="case-card-stats">
+        <div class="case-stat">
+          <div class="case-stat-value text-cyan">{{ case.post_count }}</div>
+          <div class="case-stat-label">Posts</div>
+        </div>
+        <div class="case-stat">
+          <div class="case-stat-value">{{ case.time_range }}</div>
+          <div class="case-stat-label">Time Range</div>
+        </div>
+        <div class="case-stat" style="margin-left: auto">
+          <span class="badge badge-success" style="font-size: 11px">
+            {% if case.post_count > 0 %}Ready{% else %}No Data{% endif %}
+          </span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+
+  <!-- Empty State -->
+  <div class="card">
+    <div class="empty-state">
+      <svg
+        class="empty-state-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path
+          d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+        />
+      </svg>
+      <h3>No cases yet</h3>
+      <p>
+        Create your first case to start collecting and analyzing social media
+        data.
+      </p>
+      <a href="{{ url_for('case_new') }}" class="btn btn-primary">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Create First Case
+      </a>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

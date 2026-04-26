@@ -1,0 +1,136 @@
+{% extends "base.html" %} {% block title %}Recommendations — {{ case.name }}{%
+endblock %} {% block breadcrumb %}
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('dashboard') }}">Cases</a>
+<span class="breadcrumb-sep">/</span>
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.name }}</a>
+<span class="breadcrumb-sep">/</span>
+<span class="breadcrumb-current">Recommendations</span>
+{% endblock %} {% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1 class="page-title">Recommendation System</h1>
+    <p class="page-subtitle">
+      Content-based filtering using TF-IDF + Cosine Similarity
+    </p>
+  </div>
+
+  {% if recommendations %}
+
+  <!-- KPI Row -->
+  <div class="grid-3 mb-6">
+    <div class="kpi-card">
+      <div class="kpi-label">Posts Processed</div>
+      <div class="kpi-value" data-count="{{ recommendations|length }}">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Algorithm</div>
+      <div class="kpi-value" style="font-size: 16px; padding-top: 6px">
+        TF-IDF + Cosine
+      </div>
+      <div class="kpi-change" style="color: var(--info)">
+        Content-Based Filtering
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Similarity Threshold</div>
+      <div class="kpi-value" style="font-size: 22px">0.10</div>
+      <div class="kpi-change" style="color: var(--text-muted)">
+        Minimum score
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Banner -->
+  <div class="alert alert-info mb-6">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      style="flex-shrink: 0"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <div>
+      For each post, the system finds the most similar posts using text
+      similarity. Higher scores (closer to 1.0) mean more similar content.
+    </div>
+  </div>
+
+  <!-- Recommendation Cards -->
+  {% for rec in recommendations %}
+  <div class="card mb-4">
+    <div class="card-header">
+      <div>
+        <div style="font-size: 13px; font-weight: 600; color: var(--cyan)">
+          {{ rec.author }}
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-top: 3px">
+          {{ rec.text }}
+        </div>
+      </div>
+      <span class="badge badge-cyan"
+        >{{ rec.similar|length }} similar posts</span
+      >
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      {% for sim in rec.similar %}
+      <div
+        style="
+          background: var(--surface-2);
+          border-radius: var(--radius-md);
+          padding: 12px 14px;
+          border: 1px solid var(--border);
+        "
+      >
+        <div class="d-flex align-center justify-between mb-2">
+          <span style="font-size: 13px; font-weight: 500; color: var(--text)">
+            {{ sim.author }}
+          </span>
+          <div class="d-flex gap-2">
+            <span class="badge badge-success">
+              Similarity: {{ sim.score }}
+            </span>
+            <span class="badge badge-muted"> ❤️ {{ sim.likes }} </span>
+          </div>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0">
+          {{ sim.text }}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %} {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <svg
+        class="empty-state-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <polygon
+          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                         12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+        />
+      </svg>
+      <h3>No recommendations yet</h3>
+      <p>Need at least 3 posts to generate recommendations.</p>
+      <a
+        href="{{ url_for('case_detail', case_id=case.id) }}"
+        class="btn btn-primary"
+        >Collect Data</a
+      >
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
